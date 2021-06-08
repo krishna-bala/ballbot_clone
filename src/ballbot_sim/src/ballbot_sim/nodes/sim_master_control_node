@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+import time
+import rospy
+import numpy as np
+
+from std_msgs.msg import Bool
+from ballbot_sim.utils.sim_master_controller import SimMasterControlNode
+from ballbot_common.utils.action import ActionXY
+
+
+def shutdown():
+    agents = master_controller.get_agents()
+    action_xy = ActionXY(0, 0)
+    for agent_name in agents:
+        master_controller.set_action(agent_name, action_xy)
+
+
+if __name__ == "__main__":
+
+    num_trials = rospy.get_param('/sim_experiment_node/num_trials')
+    Hz = 10
+    dt = 0.2
+    try:
+        rollout_horizon = rospy.get_param('/sim_experiment_node/rollout_horizon')
+        num_rollouts = rospy.get_param('/sim_experiment_node/num_rollouts')
+        span = rospy.get_param('/sim_experiment_node/span')
+        span = np.deg2rad(span)
+    except KeyError as e:
+        print("No key named {}. Please make sure all params have been loaded properly.".format(e))
+        raise e
+    rospy.init_node("sim_master_control_node")
+
+    # Waits for the first initialization
+    rospy.wait_for_message('/all_agents/initialized', Bool)
+    master_controller = SimMasterControlNode(dt, rollout_horizon, num_rollouts, span, update_rate=1.0/Hz,
+                                             num_trials=num_trials)
+
+    rate = rospy.Rate(Hz)
+    while not rospy.is_shutdown():
+
+        # Initialize agent states
+        if master_controller.get_reset_experiment():
+            master_controller.initialize_agents()
+
+        # Set the state of each agent with data_record from gazebo model states
+        master_controller.set_agents()
+        t1 = time.time()
+        agents = master_controller.get_agents()
+
+        # Get and set the actions for execution
+        for agent_name in agents:
+            agent = agents[agent_name]
+            action_xy = agent.get_action()
+            master_controller.set_action(agent_name, action_xy)
+
+        # Execute actions if experiment is not finished
+        master_controller.execute_actions()
+        print("update time: {}".format(time.time() - t1))
+        rospy.on_shutdown(shutdown)
+        rate.sleep()

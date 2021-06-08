@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+import rospy
+
+from std_msgs.msg import Bool
+from ballbot_sim.utils.sim_spawn_spheres import SimSpawnAgents
+from ballbot_sim.srv import Initialize, InitializeResponse
+
+
+class InitializeAgentsService(object):
+
+    def __init__(self):
+        self.agent_spawner = SimSpawnAgents()
+        self.server = rospy.Service('initialize_agents', Initialize, self.handle_initialize_agents)
+
+    def handle_initialize_agents(self, foo):
+        self.agent_spawner.delete_existing_agents()
+        self.agent_spawner.spawn_agents()
+        return InitializeResponse(True)
+
+
+
+if __name__ == "__main__":
+    HZ = 10
+    rospy.init_node("sim_spawn_agents_service_node")
+    rate = rospy.Rate(HZ)
+
+    agent_initializer = InitializeAgentsService()
+
+    while not rospy.is_shutdown():
+        rate.sleep()

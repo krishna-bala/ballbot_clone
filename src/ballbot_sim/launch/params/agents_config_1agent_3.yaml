@@ -1,0 +1,19 @@
+ballbot:
+  start: [0, 0]
+  goal: [3.6, 4.5]
+  vpref: 0.8
+  radius: 0.3
+  controller: MPC
+  rollout_policy: CADRL
+
+sphere1:
+  start: [4.4, -1]
+  goal: [0, 4.5]
+  vpref: 0.8
+  radius: 0.3
+  controller: ORCA
+
+num_trials: 4
+rollout_horizon: 1.0
+num_rollouts: 10
+span: 360  # In degrees since we cannot load np.pi from yaml.

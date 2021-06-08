@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+import rospy
+
+from std_msgs.msg import Bool
+from ballbot_sim.srv import Initialize
+
+from ballbot_sim.utils.sim_experiment_status import SimExperimentStatus
+from ballbot_sim.utils.sim_util import get_names
+
+
+class AgentsStatus(object):
+    """
+    Subscribes to see if agents' states and goals are being published.
+    Publishes to let other nodes know that the agents have been initialized.
+    """
+
+    def __init__(self):
+        self.published_status = False
+        rospy.Subscriber('/all_agents/published', Bool, self.set_published_status)
+        self.initialized_publisher = rospy.Publisher('/all_agents/initialized', Bool, queue_size=10)
+
+    def set_published_status(self, msg):
+        self.published_status = msg.data
+
+    def get_published_status(self):
+        return self.published_status
+
+    def publish_initialized_status(self, status):
+        self.initialized_publisher.publish(Bool(status))
+
+
+if __name__ == "__main__":
+    HZ = 10
+    rospy.init_node("sim_experiment_node")
+    rate = rospy.Rate(HZ)
+
+    agents_status = AgentsStatus()
+
+    # Wait until all agents have been published
+    while not agents_status.get_published_status():
+        continue
+
+    # Guaranteed that all agents have been spawned because agents are being published
+    names = get_names()
+
+    experiment_setup = SimExperimentStatus(names)
+    rospy.wait_for_service('initialize_experiment')
+    initialize_experiment = rospy.ServiceProxy('initialize_experiment', Initialize)
+
+    # Initialize all agents for the first time.
+    resp1 = initialize_experiment('foo')
+    # Publish that agents have been initialized so controller knows everything is ready to go
+    agents_status.publish_initialized_status(resp1.resp)
+
+    while not rospy.is_shutdown():
+        # Check if timed out or agents at goal
+        agents_status.publish_initialized_status(resp1.resp)
+        experiment_setup.update_experiment_status()
+        # Updates experiment if timed out or at goal
+        exp_finished = experiment_setup.get_experiment_status()
+        if exp_finished:
+            agents_status.publish_initialized_status(False)
+            resp1 = initialize_experiment('foo')
+            agents_status.publish_initialized_status(resp1.resp)
+
+        rate.sleep()

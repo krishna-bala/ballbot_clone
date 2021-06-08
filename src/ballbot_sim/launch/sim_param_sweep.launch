@@ -1,0 +1,13 @@
+<launch>
+    <arg name="config" default="1agent_1" />
+
+    <node pkg="ballbot_sim" type="sim_spawn_agents_service_node" name="sim_spawn_agents_service_node" />
+    <node pkg="ballbot_sim" type="sim_states_node" name="sim_states_node" />
+    <node pkg="ballbot_sim" type="sim_experiment_node" name="sim_experiment_node" clear_params="true">
+        <rosparam file="$(find ballbot_sim)/launch/params/agents_config_$(arg config).yaml" />
+        <rosparam file="$(find ballbot_sim)/launch/params/ballbot_cost_params.yaml" />
+        <param name="experiment_config" type="str" value="$(arg config)" />
+    </node>
+    <node pkg="ballbot_sim" type="sim_master_control_node"  name="sim_master_control_node" />
+
+</launch>

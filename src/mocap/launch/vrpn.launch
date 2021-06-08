@@ -1,0 +1,36 @@
+<launch>
+
+  <arg name="server"/>
+  <arg name="robot_name"/>
+
+  <node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen">
+    <rosparam subst_value="true">
+      server: $(arg server)
+      port: 3883
+
+      update_frequency: 360.0
+      frame_id: map
+
+      # Use the VRPN server's time, or the client's ROS time.
+      use_server_time: false
+      broadcast_tf: true
+
+      # Must either specify refresh frequency > 0.0, or a list of trackers to create
+      <!-- refresh_tracker_frequency: 1.0 -->
+      trackers:
+       - $(arg robot_name) # Name of the rigid body asset
+       - agent1
+       - agent2
+       - agent3
+       - agent4
+
+    </rosparam>
+  </node>
+
+  <node pkg="topic_tools" type="relay" name="pose_relay" args="/vrpn_client_node/$(arg robot_name)/pose $(arg robot_name)/pose" />
+  <node pkg="topic_tools" type="relay" name="pose_relay_agent1" args="/vrpn_client_node/agent1/pose agent1/pose" />
+  <node pkg="topic_tools" type="relay" name="pose_relay_agent2" args="/vrpn_client_node/agent2/pose agent2/pose" />
+  <node pkg="topic_tools" type="relay" name="pose_relay_agent3" args="/vrpn_client_node/agent3/pose agent3/pose" />
+  <node pkg="topic_tools" type="relay" name="pose_relay_agent4" args="/vrpn_client_node/agent4/pose agent4/pose" />
+
+</launch>

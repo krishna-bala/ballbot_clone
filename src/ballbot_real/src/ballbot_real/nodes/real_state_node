@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+import rospy
+
+from ballbot_real.utils.real_state_sub_pub import RealStatesSubPub
+from ballbot_real.utils.real_util import get_real_names
+
+
+if __name__ == "__main__":
+    HZ = 10
+    rospy.init_node("real_states_node")
+    num_obs = rospy.get_param("~num_obs")
+    rate = rospy.Rate(HZ)
+
+    names = get_real_names(num_obs)
+    state_pub = RealStatesSubPub(names)
+    while not rospy.is_shutdown():
+        # Get PoseStamped from MoCap, convert to ModelState and ModelStates, and publish to appropriate topics
+        state_pub.publish_states()
+        # Keep publishing agent's goal that was received from param server.
+        state_pub.publish_goals()
+
+        rate.sleep()

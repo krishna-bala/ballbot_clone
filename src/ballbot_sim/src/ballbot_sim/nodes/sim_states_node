@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+import rospy
+
+from std_msgs.msg import Bool
+from ballbot_sim.srv import InitializeAgents
+
+from ballbot_sim.utils.sim_states_publisher import SimStatesPublisher
+from ballbot_sim.utils.sim_util import get_names
+
+
+if __name__ == "__main__":
+    HZ = 10
+    rospy.init_node("sim_states_node")
+    rate = rospy.Rate(HZ)
+
+    # Set up gazebo with the correct number of agents
+    rospy.wait_for_service('initialize_agents')
+    spawn_agents = rospy.ServiceProxy('initialize_agents', InitializeAgents)
+    try:
+        foo = "foo"
+        spawn_agents(foo)
+    except rospy.ServiceException as e:
+        print("Service call failed: %s" % e)
+
+    # Get the names of agents once they've spawned
+    names = get_names()
+
+    # Instantiate the publisher and publish states and goals for all agents
+    state_pub = SimStatesPublisher(names)
+    state_pub.publish_states()
+    state_pub.publish_goals()
+
+    # Publisher to let other nodes that the states and goals of agents are being published
+    agent_status = rospy.Publisher('/all_agents/published', Bool, queue_size=10)
+
+    while not rospy.is_shutdown():
+        # Get the model states from gazebo and publish to the appropriate topics
+        state_pub.publish_states()
+        # Keep publishing the agent's goal. Not really useful unless we start changing goals.
+        state_pub.publish_goals()
+        # Let other nodes know that the agents states and goals are being published.
+        agent_status.publish(Bool(True))
+
+        rate.sleep()
